@@ -1,0 +1,176 @@
+;differential manchester rx, machine reads a bit each 20 clocks, so the machine runs 20 times faster than the source
+;as the QL runs at a 100Khz speed the PIO must run at 2Mhz
+;the original design reads a bit each 16 clocks, we use 20 as we do manual pushes and we want the wait for the initial clock
+;to have some extra cycles so it can resynchronize in case the ULA skews a bit the write frequency.
+;the QL ULA sends a preamble to calibrate the clock because the media was a tape and it would stretch with the time and change the
+;frequency of the data, we don't have that problem as we are reading from the ULA and it has a precise clock of 100Khz
+;just synchronizing with the clock change is enough to read data in a precise way.
+;the preamble causes a bit of trouble because we need to find and discard it before reading actual data, as the PIO
+;is very limited we opt to read the bits as-is and send them to the CPU cores, they will take care to transform them
+;into the real data.
+;the original design sets the scratch registers and autopush from the machine configuration and uses a wrap, we don't use it
+;for readability and we have enough instructions left so I prefer to consolidate as much code as I can in the PIO itself
+
+.program microdrive_read
+
+start:
+
+    set x, 1			        ; prepare scratch registers
+    set y, 0			        ; we will use X and Y to send the bit value to the input shift register
+    
+
+public rx_gap:
+
+    wait 0 irq 7			    ; in the read gap we do nothing except to wait for an IRQ
+    set pindirs 0			    ; set the pin as input
+
+initial_high:				    ; we come from a low state (from a gap o from a bit finished in low state)
+
+    wait 1 pin 0		[14]	; wait for the rising edge, we skip three fourths of the bit cycle to sample at the middle of the second half of the bit cycle
+    jmp pin high_0			    ; if the input pin is one then there has been no value change, the bit is a zero, else we fall through and this was a one
+
+high_1:
+
+    in x, 1				        ; send the one bit to the isr
+    push				        ; send it to the fifo
+    jmp initial_high		    ; we are in a low state, the next bit must start with a high change
+
+high_0:
+
+    in y, 1				        ; send the zero bit to the isr
+    push				        ; send the isr to the fifo
+                                ; here we do nothing, the code falls through to the initial low as we are in a high state
+
+initial_low:
+
+    wait 0 pin 0		 [14]	; we wait for the low edge, we skip three fourths of the bit cycle to sample at the middle of the second half of the bit cycle
+    jmp pin low_1			    ; if the input pin is a one then we have read a value change, it is a one
+
+low_0:
+
+    in y, 1				        ; send the zero to the isr
+    push				        ; send the isr to the fifo
+    jmp initial_high		    ; we are in a low state, next bit must start with a high change
+
+low_1:
+
+    in x, 1				        ; send the one to the isr
+    push				        ; send the isr to the fifo
+    jmp initial_low			    ; we are in a high state, the next bit must start with a low change
+
+
+;----------------------------------------------------------------------------
+
+;differential manchester tx, machine transmits a bit each 16 clocks, so the machine runs 16 times faster than the source.
+;as the QL runs at a 100Khz speed the PIO must run at 1.6Mhz
+;each pull from the FIFO is a bit, this is done this way for the RX side of the machine
+;as the ULA writes a preamble with lots of trash, it's barely impossible to process it with the PIO
+
+.program microdrive_write
+.side_set 1 opt
+
+public tx_sleep:
+
+    set pindirs 0       side 0  ; on sleep the tx machine sets the pin as input to not to disturb the rx one
+    jmp tx_sleep                ; stay here forever until the CPU changes the PC to the tx gap
+
+public tx_gap:
+
+    set pindirs 1		side 1  ; on the tx gap we set line as output with low state 
+    wait 0 irq 7		 	    ; wait for an external IRQ to exit from the gap
+
+initial_high:			 	    ; we start with a high clock (or continue from a low state)
+
+    out x, 1		 	side 1  ; get a bit from the FIFO, set pin to high, move the bit to X
+    jmp !x high_0		[6] 	; jump to a high starting zero if X = 0, delay always for six instructions (8 cycles in total)
+
+high_1:
+    nop		            side 0  ; this is a one and we come from a high state, so set it to low. 
+    jmp initial_high  	[6]	    ; Next bit will start in high and we delay for 8 cycles
+
+high_0:
+    nop
+    nop         		[6]     ; We don't do anything here but delay for 8 cycles as the program will fall through to initial_low
+
+initial_low:
+
+    out x, 1			side 0      ; pull from the fifo and set pin to zero, move bit to X
+    jmp !x low_0		[6]	    ; jump to a low starting zero if X = 0, delay always for six instructions (8 cycles in total)
+
+low_1:
+    nop		            side 1	; this is a one and we come from a low state, so set it to high
+    jmp initial_low   	[6]	    ; Next bit will start in low and we delay for 8 cycles
+
+low_0: 
+    nop
+    jmp initial_high	[6]	    ; As this is a zero we do nothing and start the next cycle at high level
+
+;----------------------------------------------------------------------------
+
+; microdrive shift/select machine
+; the state machine runs 32 times faster than the MD ser_data clock.
+; as the SER_DATA clock runs at 21.5Khz then SM should run at 688Khz.
+; timming is not crytical for this application as we synchronize with the clock on each edge.
+
+.program microdrive_shift_select
+
+startup:
+
+    set pindirs, 4		        ; pin0 = data_in (in), pin1 = clock (in), pin2 = data_out (out)
+    wait 1 irq 6                ; we wait for an IRQ before starting
+
+wait_rising:
+
+    wait 1 pin 1 [7]	        ; wait for rising edge of clock and half a cycle
+    in pins 1		            ; read data pin to ISR
+    mov y, isr		            ; store the value in Y for later comparison
+    mov osr, y		            ; copy Y to OSR (prepare data to be sent to the out pin)
+    wait 0 pin 1		        ; wait for falling edge of clock
+    out pins, 1		            ; move the readed bit to the out pin
+
+    jmp x!=y state_changed      ; check if the new state is not the same 
+    mov isr, null		        ; clear the ISR
+    jmp wait_rising		        ; wait for the next rising edge
+
+state_changed:
+
+    mov x, y		            ; copy to X the new state for later comparison
+    push			            ; send it to the FIFO
+    irq 0			            ; notify the software
+    jmp wait_rising		        ; wait for the next rising edge
+
+;----------------------------------------------------------------------------
+
+; microdrive status machine
+; the state machine runs at maximum speed
+; possible MD states:		11b, read (erase off, read on)
+;				            01b, write gap (erase on, read on)
+;				            00b, write (erase on, write on)
+;
+; if by any chance a 10b is read the software must ignore it (it should not happen, the MD will never leave write on with erase off)
+
+.program microdrive_status
+
+start:
+    set pindirs 0		        ; all inputs, pin0 = R/!W, pin1 = !ERASE
+
+public device_deselected:
+
+    set x, 2		            ; Init X with 10b (erase off, write on, an impossible state)
+    mov isr, null		        ; ensure ISR is clear
+    wait 1 irq 6		        ; wait for IRQ 6
+
+device_selected:
+
+    in pins, 2		            ; read pins to the ISR
+    mov y, isr		            ; copy to Y
+    jmp x!=y status_changed	    ; check if state has changed
+    mov isr, null		        ; clear ISR if not (else the push will take care of clearing it)
+    jmp device_selected 	    ; loop until a change is found
+
+status_changed:
+
+    mov x, y		            ; copy new state to X
+    push			            ; push the state to the FIFO (we have it in the ISR)
+    irq 0			            ; trigger IRQ to notify to the software the change
+    jmp device_selected	        ; loop

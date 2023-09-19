@@ -1,0 +1,6 @@
+(fp_lib_table
+  (lib (name "RPi_Pico")(type "KiCad")(uri "${KIPRJMOD}/RPi_Pico.pretty")(options "")(descr ""))
+  (lib (name "TXU0304QPWRQ1")(type "KiCad")(uri "${KIPRJMOD}/TXU0304QPWRQ1.pretty")(options "")(descr ""))
+  (lib (name "SN74LVC1T45DBVR")(type "KiCad")(uri "${KIPRJMOD}/SN74LVC1T45DBVR.pretty")(options "")(descr ""))
+  (lib (name "EdgeCon")(type "KiCad")(uri "${KIPRJMOD}/EdgeCon.pretty")(options "")(descr ""))
+)

@@ -1,0 +1,5 @@
+(sym_lib_table
+  (lib (name "RPi_Pico")(type "KiCad")(uri "${KIPRJMOD}/RPi_Pico.kicad_sym")(options "")(descr ""))
+  (lib (name "TXU0304QPWRQ1")(type "Legacy")(uri "${KIPRJMOD}/TXU0304QPWRQ1.lib")(options "")(descr ""))
+  (lib (name "SN74LVC1T45DBVR")(type "Legacy")(uri "${KIPRJMOD}/SN74LVC1T45DBVR.lib")(options "")(descr ""))
+)
