@@ -117,14 +117,14 @@ namespace MicroDriveTools.Classes
             Directory = new MicroDriveDirectory(Sectors, Map);
         }
 
-        public MicroDriveCartridge(MicroDriveDirectory Directory, string MediumName)
+        public MicroDriveCartridge(MicroDriveDirectory Directory, string MediumName, MicroDriveSectorStrategy Strategy = MicroDriveSectorStrategy.Spaced)
         {
             Sectors = new MicroDriveSector[255];
 
             Random rnd = new Random();
             ushort randNum = (ushort)rnd.Next(0, 65535);
 
-            for (int buc = 254; buc > -1; buc--)
+            for (int buc = 0; buc < MAX_SECTORS; buc++)
                 Sectors[buc] = new MicroDriveSector(MediumName, (byte)buc, randNum);
 
             Map = new MicroDriveSectorMap();
@@ -133,12 +133,12 @@ namespace MicroDriveTools.Classes
             int currentFile = 0;
 
             byte[] fileContent = Directory.Serialize();
-            StoreFile(Map, ref currentSector, ref currentFile, fileContent);
+            StoreFile(Map, ref currentSector, ref currentFile, fileContent, Strategy);
 
             foreach (var file in Directory.Files)
             {
                 fileContent = file.Serialize();
-                StoreFile(Map, ref currentSector, ref currentFile, fileContent);
+                StoreFile(Map, ref currentSector, ref currentFile, fileContent, Strategy);
             }
 
             Map.LastAllocatedSector = (byte)currentSector;
@@ -149,7 +149,7 @@ namespace MicroDriveTools.Classes
 
         }
 
-        private void StoreFile(MicroDriveSectorMap map, ref int currentSector, ref int fileNumber, byte[] fileContent)
+        private void StoreFile(MicroDriveSectorMap map, ref int currentSector, ref int fileNumber, byte[] fileContent, MicroDriveSectorStrategy strategy)
         {
             int sectorCount = (int)Math.Ceiling((double)fileContent.Length / 512.0);
 
@@ -166,27 +166,41 @@ namespace MicroDriveTools.Classes
                 Sectors[currentSector] = sector;
                 map.AssignSector((byte)currentSector, (byte)fileNumber, (byte)buc);
 
-                currentSector = GetFreeBlock(map, (byte)currentSector);
+                currentSector = GetFreeBlock(map, (byte)currentSector, strategy);
             }
 
             fileNumber++;
         }
 
-        private byte GetFreeBlock(MicroDriveSectorMap map, byte lastSector)
+        private byte GetFreeBlock(MicroDriveSectorMap map, byte lastSector, MicroDriveSectorStrategy strategy)
         {
-            int sector = lastSector + 13;
+            int sector = lastSector;
+
+            switch (strategy)
+            {
+                case MicroDriveSectorStrategy.Sequential:
+                    sector--;
+                    break;
+                case MicroDriveSectorStrategy.Spaced:
+                    sector -= 13;
+                    break;
+                case MicroDriveSectorStrategy.Random:
+                    Random random = new Random();
+                    sector = (byte)random.Next(1, 255);
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
 
             for (int i = 0; i < MAX_SECTORS; i++)
             {
-                if (sector >= MAX_SECTORS)
-                    sector -= MAX_SECTORS;
-
-                Debug.WriteLine($"Checking sector {sector}");
+                if (sector < 0)
+                    sector += MAX_SECTORS;
 
                 if (map[sector].FileNumber == MicroDriveSectorMap.FREE_SECTOR)
                     return (byte)sector;
 
-                sector++;
+                sector--;
             }
 
             throw new OutOfMemoryException("Not enough space");
@@ -214,7 +228,9 @@ namespace MicroDriveTools.Classes
                 var s0 = this.Sectors.Where(s => s.Header.HeaderFlag == 0xFF && s.Header.SectorNumber == 0).First();
 
                 byte[] headerData = s0.Header.Serialize();
+                byte[] recordData = s0.Record.Serialize();
 
+                /*
                 MicroDriveHeader hdr;
 
                 fixed (byte* ptr = headerData)
@@ -222,9 +238,9 @@ namespace MicroDriveTools.Classes
 
                 if (!hdr.Equals(s0.Header))
                     throw new Exception("Header serialization error");
+                */
 
-                byte[] recordData = s0.Record.Serialize();
-
+                /*
                 MicroDriveRecord rec;
 
                 fixed (byte* ptr = recordData)
@@ -232,9 +248,7 @@ namespace MicroDriveTools.Classes
 
                 if (!rec.Equals(s0.Record))
                     throw new Exception("Record serialization error");
-
-                
-
+                */
 
                 mdv.AddRange(preamble);
                 mdv.AddRange(headerData);
@@ -247,6 +261,7 @@ namespace MicroDriveTools.Classes
                     headerData = sector.Header.Serialize();
                     recordData = sector.Record.Serialize();
 
+                    /*
                     fixed (byte* ptr = headerData)
                         hdr = *(MicroDriveHeader*)ptr;
 
@@ -258,6 +273,7 @@ namespace MicroDriveTools.Classes
 
                     if (!rec.Equals(sector.Record))
                         throw new Exception("Record serialization error");
+                    */
 
                     mdv.AddRange(preamble);
                     mdv.AddRange(headerData);
@@ -293,6 +309,13 @@ namespace MicroDriveTools.Classes
                 return true;
             }
             catch { return false; }
+        }
+
+        public enum MicroDriveSectorStrategy
+        {
+            Sequential,
+            Spaced,
+            Random
         }
     }
 }

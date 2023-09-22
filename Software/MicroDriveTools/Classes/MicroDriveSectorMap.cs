@@ -1,5 +1,6 @@
 ﻿using MicroDriveTools.Structs;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -98,5 +99,6 @@ namespace MicroDriveTools.Classes
         {
             return entries.Select(e => new MicroDriveSectorMapEntry { SectorNumber = e.SectorNumber, FileBlock = e.FileBlock, FileNumber = e.FileNumber }).ToArray();
         }
+
     }
 }

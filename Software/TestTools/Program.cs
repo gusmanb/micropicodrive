@@ -1,9 +1,9 @@
 ﻿using MicroDriveTools.Classes;
 using MicroDriveTools.Structs;
 
-var dir1 = ZIPImporter.ImportZIPFile("mmetropolism.zip");
+//var dir1 = ZIPImporter.ImportZIPFile("mmetropolism.zip");
 
-var md = new MicroDriveCartridge(dir1, "mmetropolism");
+//var md = new MicroDriveCartridge(dir1, "mmetropolism");
 
 //var dir = new MicroDriveDirectory();
 
@@ -18,7 +18,7 @@ var md = new MicroDriveCartridge(dir1, "mmetropolism");
 
 //var md = new MicroDriveCartridge(dir, "cosmic");
 
-md.SaveMDV("mmetropolism.mdv");
+//md.SaveMDV("mmetropolism.mdv");
 
 /*
 var cart1 = MicroDriveCartridge.LoadMDV("pepe.mdv");
@@ -73,7 +73,7 @@ foreach (var sector in cart1.Sectors)
 
 //var cart = MicroDriveCartridge.LoadMDV("empty.mdv");
 //var cart = MicroDriveCartridge.LoadMDV("fmt.mdv");
-var cart = MicroDriveCartridge.LoadMDV("mcosmic.mdv");
+var cart = MicroDriveCartridge.LoadMDV("d:\\t_fix.mdv");
 
 
 Console.WriteLine($"Cartridge name: {cart.MediumName}");

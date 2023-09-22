@@ -139,6 +139,9 @@ int8_t find_preamble_end(uint8_t* buffer)
 
 }
 
+bool inFormat = false;
+int skip = 0;
+
 //Reads a pair of buffers from a buffer set (a buffer set are four buffers, two header ones and two sector ones)
 void read_buffer_set_pair(uint8_t* destination, uint8_t* track1Buffer, uint8_t* track2Buffer, bool isHeader)
 {
@@ -146,6 +149,25 @@ void read_buffer_set_pair(uint8_t* destination, uint8_t* track1Buffer, uint8_t* 
     uint16_t track2Pos = find_preamble_end(track2Buffer);
 
     uint16_t size = isHeader ? HEADER_TRACK_DATA_SIZE : SECTOR_TRACK_DATA_SIZE;
+
+    //Check if we're writting sector 255, if true then this is a format
+    if(isHeader && !inFormat)
+    {
+        uint8_t sectorNumber = track2Buffer[track2Pos] |
+            track2Buffer[track2Pos + 1] << 1 |
+            track2Buffer[track2Pos + 2] << 2 |
+            track2Buffer[track2Pos + 3] << 3 |
+            track2Buffer[track2Pos + 4] << 4 |
+            track2Buffer[track2Pos + 5] << 5 |
+            track2Buffer[track2Pos + 6] << 6 |
+            track2Buffer[track2Pos + 7] << 7;
+
+        if(sectorNumber == 255)
+        {
+            inFormat = 1;
+            skip = currentSector;
+        }
+    }
 
     for(uint16_t buc = 0; buc < size; buc++)
     {
@@ -194,8 +216,28 @@ void read_buffer_set(uint8_t setNumber)
 //Process when a buffer set has been read by the ULA
 void process_md_read(uint8_t bufferSet)
 {
+    uint8_t secNum = cartridge_image[CARTRIDGE_SECTOR_SIZE * currentSector + 1];
+
+    //If we are in the middle of a format and we're going to send sector 254, skip it to make Minerva happy...
+    if(inFormat && secNum == 254)
+    {
+        currentSector++;
+
+        if(currentSector > 253)
+            currentSector = 0;
+    }
+
     write_buffer_set(bufferSet, currentSector);
+
+    //If we are in the middle of a format and we're going to send sector 13, damage it to make Minerva happy...
+    if(inFormat && secNum == 13)
+    {
+        cartridge_image[CARTRIDGE_SECTOR_SIZE * currentSector + 13] += 13;
+        cartridge_image[CARTRIDGE_SECTOR_SIZE * currentSector + 128] += 13;
+    }
+
     currentSector++;
+
     if(currentSector == 255)
         currentSector = 0;
 }
@@ -204,12 +246,30 @@ void process_md_read(uint8_t bufferSet)
 void process_md_write(uint8_t bufferSet)
 {
     read_buffer_set(bufferSet);
+
+    uint8_t secNum = cartridge_image[CARTRIDGE_SECTOR_SIZE * currentSector + 1];
+
+    //If we are in the middle of a format and we're going to send sector 254, skip it to make Minerva happy...
+    if(inFormat && secNum == 254)
+    {
+        currentSector++;
+
+        if(currentSector > 253)
+            currentSector = 0;
+    }
+
     write_buffer_set(bufferSet, currentSector);
+
+    //If we are in the middle of a format and we're going to send sector 13, damage it to make Minerva happy...
+    if(inFormat && secNum == 13)
+    {
+        cartridge_image[CARTRIDGE_SECTOR_SIZE * currentSector + 13] += 13;
+        cartridge_image[CARTRIDGE_SECTOR_SIZE * currentSector + 128] += 13;
+    }
+
     currentSector++;
     if(currentSector == 255)
         currentSector = 0;
-
-    //TODO: persist file (use alarm, persist after 5 seconds)
 }
 
 //Process events from the MD control
@@ -222,6 +282,7 @@ void process_md_to_ui_event(void* event)
         case MTU_MD_DESELECTED:
 
             mdInUse = false;
+            inFormat = false;
             LED_OFF(PIN_LED_SELECT);
             LED_OFF(PIN_LED_READ);
             LED_OFF(PIN_LED_WRITE);
@@ -510,9 +571,8 @@ bool load_mdv_cartridge()
     UINT readSize = 0;
 
     int bufferPos = 0;
-    int filePos = CART_MDV_SIZE - MDV_SECTOR_SIZE;
+    int filePos = 0;
 
-    //reverse order. Sure?
     for(int buc = 0; buc < 255; buc++)
     {
         filePos = buc * MDV_SECTOR_SIZE + MDV_PREAMBLE_SIZE; //skip preamble

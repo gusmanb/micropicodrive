@@ -106,6 +106,14 @@ namespace MicroDriveTools.Classes
             Header = hdr;
         }
 
+        public void UpdateData(byte[] Data)
+        {
+            var hdr = Header;
+            hdr.FileLength = (uint)Data.Length + 64;
+            Header = hdr;
+            this.Data = Data;
+        }
+
         public unsafe byte[] Serialize()
         {
             List<byte> buffer = new List<byte>();

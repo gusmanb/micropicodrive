@@ -1,0 +1,29 @@
+--Main unit--
+
+C1 to C6: 100nf, 0603
+R1: 4k7, 0603
+IC1, IC2: SN74LVC1T45DBVR
+IC3: TXU0304PWR
+U1: 7805 TO220 or DC/DC buck module
+U2: Raspberry pico
+J1: Card edge connector, 2x8p, 2.54mm, curved pin.
+J2: Male IDC, 2x7p, 2.54mm (check assembly instructions for more details)
+
+
+--Cartridge--
+
+R1 to R3: 1k, 0603
+SW1 to SW3: SMD microswitch push button
+SCR1: 0'49" SD1306 module
+D1 to D3: 3mm LED (red, green and blue)
+SD1: SD card socket module
+
+--Buy links--
+
+SN74LVC1T45:		https://es.aliexpress.com/item/1005004345377244.html
+TXU0304PWR:  		https://es.aliexpress.com/item/1005004929752779.html
+DC/DC buck converter: 	https://es.aliexpress.com/item/1005005343434991.html
+Card edge connector:	https://es.aliexpress.com/item/1005001884522039.html
+IDC connector:		https://es.aliexpress.com/item/1005001835803614.html
+Screen module:		https://es.aliexpress.com/item/1005003874700775.html
+SD card module:		https://es.aliexpress.com/item/32791255542.html

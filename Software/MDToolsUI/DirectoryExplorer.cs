@@ -39,11 +39,12 @@ namespace MDToolsUI
                 }),
                 new MenuBarItem("_Tools", new MenuItem[]
                 {
-                    new MenuItem("_Fix drive name", "", () => { MessageBox.ErrorQuery("Error", "Not implemented yet.", "Ok"); })
+                    new MenuItem("_Fix drive name", "", () => { FixDrives_Clicked(); }),
+                    new MenuItem("_Batch convert", "", () => { BatchConvert_Clicked(); })
                 }),
                 new MenuBarItem ("_Help", new MenuItem []
                 {
-                    new MenuItem ("_About", "", () => { MessageBox.Query("About", "MicroDrive Tools V1.0\n\nDeveloped by El Dr. Gusman\n\nhttps://github.com/ElDrGusman/MicroDriveTools", "Ok"); })
+                    new MenuItem ("_About", "", () => { MessageBox.Query("About", "MicroDrive Tools V1.0\n\nDeveloped by El Dr. Gusman\n\nhttps://github.com/gusmanb/micropicodrive", "Ok"); })
                 })
             });
 
@@ -162,6 +163,42 @@ namespace MDToolsUI
             LayoutSubviews();
         }
 
+        private void BatchConvert_Clicked()
+        {
+            var dlg = new BatchConverter();
+            Application.Run(dlg);
+        }
+
+        private void FixDrives_Clicked()
+        {
+            var dlg = new DeviceNameSelector();
+            Application.Run(dlg);
+            
+            if(dlg.SelectedNames == null)
+                return;
+
+            int matches = 0;
+
+            foreach (var file in directory.Files)
+            {
+                byte[] data = file.Data;
+                int occurrences = Utils.ReplaceDriveNames(data, dlg.SelectedNames);
+
+                if (occurrences > 0)
+                {
+                    file.UpdateData(data);
+                    matches += occurrences;
+                }
+            }
+
+            if(matches == 0)
+                MessageBox.Query("Fix drive name", "No matches found.", "Ok");
+            else
+                MessageBox.Query("Fix drive name", $"Drive names fixed: {matches}", "Ok");
+        }
+
+        
+
         private void BtnExport_Clicked()
         {
             try
@@ -210,7 +247,7 @@ namespace MDToolsUI
 
                 string fName = saveDialog.FileName.ToString() ?? "";
 
-                var mediumDlg = new InputBox("Medium name", "Enter the name of the medium", Path.GetFileName(fName).Replace(".", "_"));
+                var mediumDlg = new InputBox("Medium name", "Enter the name of the medium", Path.GetFileNameWithoutExtension(fName).Replace(".", "_"));
 
                 Application.Run(mediumDlg);
 
@@ -218,7 +255,7 @@ namespace MDToolsUI
                     return;
 
                 MicroDriveCartridge cartridge = new MicroDriveCartridge(directory, mediumDlg.Input);
-                cartridge.SaveMDV(fName);
+                cartridge.SaveMDV(saveDialog.FilePath.ToString());
 
                 MessageBox.Query("Success", "Cartridge saved successfully.", "Ok");
             }
