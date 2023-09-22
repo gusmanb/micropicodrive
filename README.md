@@ -1,5 +1,18 @@
 # MicroPicoDrive - An internal replacement of the Sinclair QL Microdrive.
 
+## UPDATE 22/03/2023
+
+The device has been tested and patched to work with Minerva. Yup!
+Also, the PCB has been modified, it should now be correctly placed but I'm waiting to receive a new batch of PCB's, until then I can't ensure 100% that it is totally fixed.
+
+The Wiki has been set in place with documentation on how to assemble and use the device.
+
+The BOM has been added to the Hardware folder and contains links to the more uncommon components.
+
+Have fun!
+
+# Initial commit
+
 WARNING! This is a work in progress, I need to test it with Minerva ROM and do some adjustments to the PCB, be ware!
 
 So, I got a Sinclair QL some months ago, I wanted one for many many years, I'm a Sinclair fan and I always have been in the Spectrum world and the QL always has been something that I wanted to get.
