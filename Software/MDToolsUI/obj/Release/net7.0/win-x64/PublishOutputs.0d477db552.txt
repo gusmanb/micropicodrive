@@ -1,5 +1,0 @@
-C:\Users\geniw\source\repos\MicroDriveTools\MDToolsUI\bin\Release\net7.0\publish\win-x64\MDToolsUI.pdb
-C:\Users\geniw\source\repos\MicroDriveTools\MDToolsUI\bin\Release\net7.0\publish\win-x64\libZipSharpNative-3-0.dll
-C:\Users\geniw\source\repos\MicroDriveTools\MDToolsUI\bin\Release\net7.0\publish\win-x64\libZipSharpNative-3-0.pdb
-C:\Users\geniw\source\repos\MicroDriveTools\MDToolsUI\bin\Release\net7.0\publish\win-x64\MicroDriveTools.pdb
-C:\Users\geniw\source\repos\MicroDriveTools\MDToolsUI\bin\Release\net7.0\publish\win-x64\MDToolsUI.exe
