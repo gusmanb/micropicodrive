@@ -29,7 +29,7 @@ namespace MDToolsUI
 
             btnSelectFiles.Clicked += () =>
             {
-                var dlg = new OpenDialog("Select files", "Select files to convert", new List<string>() { ".zip", ".mdv" }, OpenDialog.OpenMode.File) { AllowsMultipleSelection = true } ;
+                var dlg = new OpenDialog("Select files", "Select files to convert", new List<string>() { ".zip", ".mdv", ".*" }, OpenDialog.OpenMode.File) { AllowsMultipleSelection = true } ;
 
                 Application.Run(dlg);
 
@@ -61,7 +61,7 @@ namespace MDToolsUI
                 if (dlg.Canceled || dlg.FilePath == null)
                     return;
 
-                var dest = dlg.FilePath;
+                var dest = dlg.FilePath.ToString();
 
                 string[]? fixNames = null;
 
@@ -80,17 +80,28 @@ namespace MDToolsUI
                 {
                     try
                     {
+                        ushort? mediumId = null;
+                        string mediumName = null;
+
                         MicroDriveDirectory? dir = null;
 
                         if (file.EndsWith(".zip"))
+                        {
                             dir = ZIPImporter.ImportZIPFile(file);
+                            mediumName = System.IO.Path.GetFileNameWithoutExtension(file).Replace(".", "_");
+                        }
                         else if (file.EndsWith(".mdv"))
                         {
                             var mdv = MicroDriveCartridge.LoadMDV(file);
                             dir = mdv.Directory;
+                            mediumId = mdv.Sectors[0].Header.MediumId;
+                            mediumName = mdv.Sectors[0].Header.MediumName;
                         }
-
-                        string mediumName = System.IO.Path.GetFileNameWithoutExtension(file).Replace(".", "_");
+                        else
+                        {
+                            MessageBox.ErrorQuery("Error", $"Unsupported file type: {System.IO.Path.GetExtension(file)}.", "Ok");
+                            return;
+                        }
 
                         if (mediumName.Length > 10)
                             mediumName = mediumName.Substring(0, 10);
@@ -106,8 +117,9 @@ namespace MDToolsUI
                             }
                         }
 
-                        MicroDriveCartridge cartridge = new MicroDriveCartridge(dir, mediumName);
-                        var newFile = System.IO.Path.Combine(Path.GetDirectoryName(file), System.IO.Path.GetFileNameWithoutExtension(file) + ".mdv");
+                        MicroDriveCartridge cartridge = new MicroDriveCartridge(dir, mediumName, MicroDriveCartridge.MicroDriveSectorStrategy.Spaced, mediumId);
+
+                        var newFile = System.IO.Path.Combine(dest, System.IO.Path.GetFileNameWithoutExtension(file) + ".mdv");
 
                         cartridge.SaveMDV(newFile);
                     }

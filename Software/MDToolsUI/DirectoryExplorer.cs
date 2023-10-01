@@ -219,7 +219,7 @@ namespace MDToolsUI
                     if (dlg.Canceled || dlg.FileName == null)
                         return;
 
-                    File.WriteAllBytes(dlg.FileName.ToString(), file.Data);
+                    File.WriteAllBytes(dlg.FilePath.ToString(), file.Data);
                 }
             }
             catch (Exception ex)
@@ -247,14 +247,23 @@ namespace MDToolsUI
 
                 string fName = saveDialog.FileName.ToString() ?? "";
 
+                /*
                 var mediumDlg = new InputBox("Medium name", "Enter the name of the medium", Path.GetFileNameWithoutExtension(fName).Replace(".", "_"));
 
                 Application.Run(mediumDlg);
 
                 if (mediumDlg.Input == null)
                     return;
+                */
 
-                MicroDriveCartridge cartridge = new MicroDriveCartridge(directory, mediumDlg.Input);
+                var mediumDlg = new MediaInfo(Path.GetFileNameWithoutExtension(fName).Replace(".", "_"));
+
+                Application.Run(mediumDlg);
+
+                if (mediumDlg.MediaName == null)
+                    return;
+
+                MicroDriveCartridge cartridge = new MicroDriveCartridge(directory, mediumDlg.MediaName, MediaIdentifier: mediumDlg.MediaId);
                 cartridge.SaveMDV(saveDialog.FilePath.ToString());
 
                 MessageBox.Query("Success", "Cartridge saved successfully.", "Ok");
