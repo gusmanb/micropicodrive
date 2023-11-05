@@ -1,4 +1,4 @@
-20109700095974184
+20116534276371692
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -6236,6 +6236,27 @@ capacitor tantalum
 0
 2
 2
+CartridgeComponents
+Edge
+
+
+0
+16
+16
+CartridgeComponents
+SDCard
+
+
+0
+9
+9
+CartridgeComponents
+Screen
+
+
+0
+4
+4
 Connector
 Banana_Jack_1Pin
 Single banana socket, footprint - 6mm drill
@@ -57378,6 +57399,13 @@ Yellow 5381 Series LED
 0
 2
 2
+MBCartridgeEdge
+CartridgeEdge
+
+
+0
+8
+8
 Module
 A20_OLINUXINO_LIME2
 A20 Olinuxino LIME2, 1.2GHz, 512-1024MB RAM, Micro-SD, NAND or eMMC, 1000Mbit Ethernet
@@ -76556,7 +76584,7 @@ RPi_Pico_SMD_TH
 Through hole straight pin header, 2x20, 2.54mm pitch, double rows
 Through hole pin header THT 2x20 2.54mm double row
 0
-86
+83
 43
 RPi_Pico
 USB_Micro-B_Amphenol_10103594-0001LF_Horizontal_modified
