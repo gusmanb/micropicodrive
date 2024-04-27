@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -19,6 +20,10 @@ namespace MicroDriveTools.Classes
         const int MDV_PAD_SIZE = 34;
         const int MDV_SECTOR_SIZE = 686;
 
+        const int DMP_HEADER_SIZE = 14;
+        const int DMP_DATA_SIZE = 516;
+        const int DMP_SECTOR_SIZE = 530;
+
         const int MPD_CARTRIDGE_SIZE = 160140;
 
         public unsafe static MicroDriveCartridge LoadMDV(string CartridgeFile)
@@ -32,7 +37,12 @@ namespace MicroDriveTools.Classes
             var rawData = File.ReadAllBytes(CartridgeFile);
 
             if (rawData.Length != MDV_CARTRIDGE_SIZE)
+            {
+                if (TestMDVDump(rawData))
+                    return LoadDump(rawData);
+
                 throw new ArgumentException("Invalid MDV cartridge");
+            }
 
             MicroDriveSector[] sectors = new MicroDriveSector[255];
 
@@ -62,6 +72,68 @@ namespace MicroDriveTools.Classes
             }
 
             return new MicroDriveCartridge(sectors);
+        }
+
+        private unsafe static MicroDriveCartridge LoadDump(byte[] rawData)
+        {
+            int pos = 46;
+
+            MicroDriveSector[] sectors = new MicroDriveSector[255];
+
+            fixed (byte* ptr = rawData)
+            {
+                List<MicroDriveSector> sectorBuffer = new List<MicroDriveSector>();
+
+                while(pos < rawData.Length)
+                { 
+                    MicroDriveSector sector = new MicroDriveSector();
+
+                    MicroDriveHeader* bufferHeader = (MicroDriveHeader*)(ptr + pos);
+                    sector.Header = *bufferHeader;
+
+                    pos += DMP_HEADER_SIZE;
+
+                    MicroDriveRecord rec = new MicroDriveRecord();
+
+                    rec.FileNumber = ptr[pos];
+                    rec.FileBlock = ptr[pos + 1];
+
+                    for (int buc = 0; buc < 512; buc++)
+                    {
+                        rec.Data[buc] = ptr[pos + 2 + buc];
+                    }
+
+                    sector.Record = rec;
+
+                    sectorBuffer.Add(sector);
+
+                    Debug.Print($"Sector {sector.Header.SectorNumber}, media {sector.Header.MediumName} file {sector.Record.FileNumber}, block {sector.Record.FileBlock}");
+
+                    pos += DMP_DATA_SIZE;
+                }
+
+                while (sectorBuffer.Count != 255)
+                {
+                    var newSect = new MicroDriveSector();
+                    newSect.Header.HeaderFlag = 0x00;
+                    newSect.Header.SectorNumber = 0xFE;
+                    sectorBuffer.Add(newSect);
+                }
+
+                sectors = sectorBuffer.ToArray();
+            }
+
+            return new MicroDriveCartridge(sectors);
+        }
+
+        private static bool TestMDVDump(byte[] rawData)
+        {
+            if (rawData.Length < 8)
+                return false;
+
+            string name = Encoding.ASCII.GetString(rawData, 0, 8);
+
+            return name == "Mdv*Dump";
         }
 
         public unsafe static MicroDriveCartridge LoadMPD(string CartridgeFile)
@@ -117,15 +189,22 @@ namespace MicroDriveTools.Classes
             Directory = new MicroDriveDirectory(Sectors, Map);
         }
 
-        public MicroDriveCartridge(MicroDriveDirectory Directory, string MediumName, MicroDriveSectorStrategy Strategy = MicroDriveSectorStrategy.Spaced)
+        public MicroDriveCartridge(MicroDriveDirectory Directory, string MediumName, MicroDriveSectorStrategy Strategy = MicroDriveSectorStrategy.Spaced, ushort? MediaIdentifier = null)
         {
             Sectors = new MicroDriveSector[255];
 
-            Random rnd = new Random();
-            ushort randNum = (ushort)rnd.Next(0, 65535);
+            ushort mediaId;
+
+            if (MediaIdentifier == null)
+            {
+                Random rnd = new Random();
+                mediaId = (ushort)rnd.Next(0, 65535);
+            }
+            else
+                mediaId = MediaIdentifier.Value;
 
             for (int buc = 0; buc < MAX_SECTORS; buc++)
-                Sectors[buc] = new MicroDriveSector(MediumName, (byte)buc, randNum);
+                Sectors[buc] = new MicroDriveSector(MediumName, (byte)buc, mediaId);
 
             Map = new MicroDriveSectorMap();
 
@@ -143,7 +222,7 @@ namespace MicroDriveTools.Classes
 
             Map.LastAllocatedSector = (byte)currentSector;
 
-            Sectors[0] = Map.ToSectorZero(MediumName, randNum);
+            Sectors[0] = Map.ToSectorZero(MediumName, mediaId);
 
             this.Directory = new MicroDriveDirectory(Sectors, Map);
 

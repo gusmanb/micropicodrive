@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -28,7 +29,12 @@ namespace MicroDriveTools.Classes
             List<MicroDriveSectorMapEntry> eBuffer = new List<MicroDriveSectorMapEntry>();
 
             for (int buc = 0; buc < 510; buc += 2)
+            {
+
                 eBuffer.Add(new MicroDriveSectorMapEntry { SectorNumber = (byte)(buc / 2), FileNumber = SectorZero.Record.Data[buc], FileBlock = SectorZero.Record.Data[buc + 1] });
+
+                Debug.Print($"Sector {buc / 2} is {SectorZero.Record.Data[buc]}:{SectorZero.Record.Data[buc + 1]}");
+            }
 
             LastAllocatedSector = SectorZero.Record.Data[511];
 
