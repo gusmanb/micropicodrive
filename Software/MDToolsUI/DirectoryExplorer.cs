@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Linq;
 using System.Management;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Terminal.Gui;
@@ -19,6 +20,7 @@ namespace MDToolsUI
 
         public DirectoryExplorer()
         {
+
             Title = "MicroDrive Tools V1.0 - El Dr. Gusman";
 
             MenuBar menu = new MenuBar(new MenuBarItem[]
@@ -435,7 +437,7 @@ namespace MDToolsUI
             }
             catch (Exception ex)
             {
-                MessageBox.ErrorQuery("Error", ex.Message, "Ok");
+                MessageBox.ErrorQuery("Error", ex.Message + " - " + ex.StackTrace, "Ok");
             }
         }
 
