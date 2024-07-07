@@ -792,6 +792,7 @@ void process_user_interface()
                             PRINT_STR("Empty      ", 0, 1);
                             PRINT_STR("folder.    ", 0, 2);
                             RENDER_SCREEN();
+                            uiState = SELECT_FILE;
                         }
                         else
                         {
